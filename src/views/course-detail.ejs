@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="<%= user.language === 'Anglais' ? 'en' : (user.language === 'Espagnol' ? 'es' : 'en') %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 shadow-sm">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <a href="/dashboard" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-xl transition font-medium">← Back</a>
+                <h1 class="text-base font-bold tracking-tight text-slate-900"><%= course.title %></h1>
+            </div>
+            <div class="text-xs text-indigo-600 font-semibold"><%= user.language %></div>
+        </div>
+    </header>
+
+    <!-- Main Content (Lesson Reader / Chat Assistant Grid) -->
+    <main class="container mx-auto p-6 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Left Column: Multi-Format Lesson Reader -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-xl font-black text-indigo-600"><%= lesson.title %></h2>
+                
+                <% if (lesson.content_image_url) { %>
+                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-white p-2 flex justify-center">
+                        <img src="<%= lesson.content_image_url %>" alt="Course Illustration" class="rounded-lg max-h-64 object-contain">
+                    </div>
+                <% } %>
+
+                <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap pt-2">
+                    <%= lesson.content_text %>
+                </div>
+
+                <!-- Button to complete lesson and update global progress -->
+                <div class="pt-6 border-t border-slate-200 flex justify-between items-center">
+                    <form action="/lessons/<%= lesson.id %>/complete" method="POST">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-md flex items-center gap-2">
+                            <span>✅</span> Mark this lesson as completed
+                        </button>
+                    </form>
+
+                    <% if (typeof quizId !== 'undefined' && quizId) { %>
+                        <a href="/quiz/<%= quizId %>" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl text-xs transition shadow-md flex items-center gap-2">
+                            <span>🧠</span> Take Adaptive Quiz
+                        </a>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Danna AI Chat Assistant -->
+        <div class="space-y-4 flex flex-col">
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col h-[600px] justify-between">
+                <div>
+                    <div class="flex items-center space-x-2 pb-3 border-b border-slate-200">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Danna AI Assistant</h3>
+                    </div>
+                </div>
+
+                <!-- Chat Box -->
+                <div id="chat-box" class="flex-grow overflow-y-auto py-4 space-y-3 pr-2 text-xs flex flex-col">
+                    <div class="bg-white border border-slate-200 rounded-xl p-3 text-slate-700 shadow-xs self-start max-w-[85%]">
+                        Hello! I am <strong>Danna AI</strong>. Ask me any questions about this course, and I will reply to you in <%= user.language %>.
+                    </div>
+                </div>
+
+                <!-- Dynamic Input Form -->
+                <form id="chat-form" class="pt-3 border-t border-slate-200 space-y-2">
+                    <div class="flex gap-2">
+                        <input type="text" id="chat-input" name="message" required placeholder="Ask a question about the course..." class="flex-grow bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow-sm">Send</button>
+                    </div>
+                    <!-- Optional Image Selection Button -->
+                    <div class="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                        <label class="cursor-pointer flex items-center gap-1.5 hover:text-emerald-600 transition">
+                            <span>📎 Attach an image</span>
+                            <input type="file" id="chat-image" name="chatImage" accept="image/*" class="hidden" onchange="document.getElementById('fileNameDisplay').textContent = this.files[0] ? this.files[0].name : ''">
+                        </label>
+                        <span id="fileNameDisplay" class="text-emerald-600 font-medium truncate max-w-[150px]"></span>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Script JS for chat history and persistence -->
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatImage = document.getElementById('chat-image');
+        const chatBox = document.getElementById('chat-box');
+        const courseId = "<%= course.id %>";
+        
+        let chatHistory = [];
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Display user message in chat box
+            chatBox.innerHTML += `<div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-indigo-900 self-end max-w-[85%]"><strong>You:</strong> ${message}</div>`;
+            chatInput.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('history', JSON.stringify(chatHistory));
+            if (chatImage.files[0]) {
+                formData.append('chatImage', chatImage.files[0]);
+            }
+
+            try {
+                const response = await fetch(`/courses/${courseId}/chat`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.reply) {
+                    // Display Danna AI response
+                    chatBox.innerHTML += `<div class="bg-white border border-emerald-200 rounded-xl p-3 text-emerald-900 self-start max-w-[85%] whitespace-pre-wrap shadow-xs"><strong>Danna AI:</strong> ${data.reply}</div>`;
+                    
+                    // Update conversation history
+                    chatHistory.push({ role: "user", content: message });
+                    chatHistory.push({ role: "assistant", content: data.reply });
+
+                    // Reset image field
+                    chatImage.value = '';
+                    document.getElementById('fileNameDisplay').textContent = '';
+                } else {
+                    chatBox.innerHTML += `<div class="bg-red-50 text-red-600 p-3 rounded-xl self-start max-w-[85%]">Error receiving response from Danna AI.</div>`;
+                }
+            } catch (err) {
+                chatBox.innerHTML += `<div class="bg-red-50 text-red-600 p-3 rounded-xl self-start max-w-[85%]">Network error.</div>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    </script>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 p-4 text-center text-xs text-slate-400">
+        DannaEdu AI – Powered by Danna AI &copy; 2026
+    </footer>
+
+</body>
+</html>

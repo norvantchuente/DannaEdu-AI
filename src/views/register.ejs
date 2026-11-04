@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-slate-800 min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-lg bg-slate-50 border border-slate-200 rounded-2xl p-8 shadow-sm space-y-6">
+        <div class="text-center">
+            <h1 class="text-2xl font-black tracking-tight text-indigo-600">DannaEdu <span class="text-slate-900">AI</span></h1>
+            <p class="text-xs text-slate-500 mt-1">Create your multilingual learning profile (25 supported languages)</p>
+        </div>
+
+        <% if (error) { %>
+            <div class="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium"><%= error %></div>
+        <% } %>
+
+        <form action="/register" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                <input type="text" name="name" required class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                <input type="email" name="email" required class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                <input type="password" name="password" required class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Preferred Language (25 languages)</label>
+                    <select name="language" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="Français">French</option>
+                        <option value="Anglais">English</option>
+                        <option value="Allemand">German</option>
+                        <option value="Arabe">Arabic</option>
+                        <option value="Bengali">Bengali</option>
+                        <option value="Chinois mandarin">Mandarin Chinese</option>
+                        <option value="Coréen">Korean</option>
+                        <option value="Espagnol">Spanish</option>
+                        <option value="Hébreu">Hebrew</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Indonésien">Indonesian</option>
+                        <option value="Italien">Italian</option>
+                        <option value="Japonais">Japanese</option>
+                        <option value="Kannada">Kannada</option>
+                        <option value="Malais">Malay</option>
+                        <option value="Marathi">Marathi</option>
+                        <option value="Néerlandais">Dutch</option>
+                        <option value="Pidgin English">Pidgin English</option>
+                        <option value="Polonais">Polish</option>
+                        <option value="Portugais">Portuguese</option>
+                        <option value="Tagalog">Tagalog</option>
+                        <option value="Tamoul">Tamil</option>
+                        <option value="Télougou">Telugu</option>
+                        <option value="Thaï">Thai</option>
+                        <option value="Turc">Turkish</option>
+                        <option value="Vietnamien">Vietnamese</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Target Level</label>
+                    <select name="level" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="Débutant">Beginner</option>
+                        <option value="Intermédiaire">Intermediate</option>
+                        <option value="Professionnel">Professional</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl text-sm transition shadow-md shadow-indigo-600/20">Register</button>
+        </form>
+
+        <p class="text-center text-xs text-slate-500">Already have an account? <a href="/login" class="text-indigo-600 hover:underline font-medium">Sign In</a></p>
+    </div>
+</body>
+</html>

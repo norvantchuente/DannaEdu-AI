@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="<%= user.language === 'Anglais' ? 'en' : (user.language === 'Espagnol' ? 'es' : 'en') %>">
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-slate-800 min-h-screen flex flex-col font-sans">
+    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 shadow-sm">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/dashboard" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-xl transition font-medium">← Dashboard</a>
+            <h1 class="text-base font-bold text-slate-900">🔍 Image / Video Analysis & Segmentation</h1>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column (5/12): Form & JSON Data -->
+        <div class="lg:col-span-5 space-y-6">
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <div class="bg-pink-50 border border-pink-100 p-3 rounded-xl text-xs text-pink-700">
+                    ℹ️ <strong>Multimodal Segmentation:</strong> Upload an <strong>image</strong> (.png, .jpg) or a <strong>video</strong> (.mp4, .mov, .webm) and specify the element to isolate and outline down to the pixel.
+                </div>
+
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium"><%= error %></div>
+                <% } %>
+
+                <form action="/tools/sam" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Media to segment (Image or Video):</label>
+                        <input type="file" name="imageFile" accept="image/*,video/mp4,video/webm,video/quicktime" required class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-600 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-pink-600 file:text-white hover:file:bg-pink-500 shadow-xs">
+                        <p class="text-[11px] text-slate-400 mt-1">Supported formats: PNG, JPG, WEBP, MP4, MOV, WEBM.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Target Element (Short English keyword recommended):</label>
+                        <input type="text" name="targetPrompt" value="<%= typeof targetPrompt !== 'undefined' && targetPrompt ? targetPrompt : '' %>" required placeholder="Ex: person, heart, cell, car, hand, book..." class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:ring-2 focus:ring-pink-500 shadow-xs">
+                    </div>
+                    <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-medium py-3 rounded-xl text-sm transition shadow-md">Run Segmentation</button>
+                </form>
+            </div>
+
+            <!-- Raw JSON Data Block -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Raw Data (JSON):</h3>
+                    <% if (typeof segmentResult !== 'undefined' && segmentResult) { %>
+                        <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('rawJsonData').innerText)" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-2.5 py-1 rounded-lg transition">
+                            📋 Copy JSON
+                        </button>
+                    <% } %>
+                </div>
+                <pre id="rawJsonData" class="bg-white border border-slate-200 rounded-xl p-3 font-mono text-[11px] leading-relaxed overflow-x-auto overflow-y-auto max-h-56 text-slate-700 shadow-xs"><%= typeof segmentResult !== 'undefined' && segmentResult ? segmentResult : 'No segmentation data available yet.' %></pre>
+            </div>
+        </div>
+
+        <!-- Right Column (7/12): Visual Rendering Image/Video + RLE Crop -->
+        <div class="lg:col-span-7 bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Interactive Visualization (<%= typeof mediaType !== 'undefined' && mediaType === 'video' ? 'Video + Tracking Canvas' : 'HTML5 Canvas' %>)
+                    </h3>
+                    <p id="detectionCounter" class="text-xs text-slate-500 mt-0.5">Waiting for media...</p>
+                </div>
+
+                <% if (typeof sourceMediaBase64 !== 'undefined' && sourceMediaBase64) { %>
+                    <!-- Display Controls -->
+                    <div class="flex flex-wrap items-center gap-3 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-xs text-xs">
+                        <label class="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                            <input type="checkbox" id="toggleBoxes" checked onchange="window.refreshCurrentView()" class="rounded text-pink-600 focus:ring-pink-500">
+                            Boxes
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                            <input type="checkbox" id="toggleMasks" checked onchange="window.refreshCurrentView()" class="rounded text-pink-600 focus:ring-pink-500">
+                            RLE Masks
+                        </label>
+                        <div class="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                            <span class="text-slate-500">Opacity:</span>
+                            <input type="range" id="maskOpacity" min="0.1" max="0.9" step="0.05" value="0.45" oninput="window.refreshCurrentView()" class="w-20 accent-pink-600">
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+
+            <!-- Image or Video Display Area -->
+            <div class="flex-grow flex items-center justify-center bg-white border border-slate-200 rounded-xl p-4 shadow-xs min-h-[380px] overflow-hidden relative">
+                <% if (typeof sourceMediaBase64 !== 'undefined' && sourceMediaBase64) { %>
+                    <% if (typeof mediaType !== 'undefined' && mediaType === 'video') { %>
+                        <div class="relative inline-block max-w-full">
+                            <video id="samVideo" 
+                                   src="<%= sourceMediaBase64 %>" 
+                                   controls 
+                                   playsinline 
+                                   preload="auto"
+                                   crossorigin="anonymous"
+                                   class="max-w-full max-h-[460px] rounded-lg shadow-xs block bg-black">
+                                Your browser does not support HTML5 video playback.
+                            </video>
+                            <canvas id="samVideoOverlay" 
+                                    style="pointer-events: none;" 
+                                    class="absolute top-0 left-0 w-full h-full pointer-events-none rounded-lg z-10"></canvas>
+                        </div>
+                    <% } else { %>
+                        <canvas id="samCanvas" class="max-w-full max-h-[480px] object-contain rounded-lg shadow-xs cursor-pointer" onclick="window.openCanvasModal()"></canvas>
+                    <% } %>
+                <% } else { %>
+                    <div class="text-center py-12 space-y-2">
+                        <div class="text-3xl">🎬 🖼️</div>
+                        <p class="text-xs text-slate-400">Upload an image or video to visualize and extract silhouettes.</p>
+                    </div>
+                <% } %>
+            </div>
+
+            <!-- Transparent RLE Extraction Toolbar -->
+            <% if (typeof sourceMediaBase64 !== 'undefined' && sourceMediaBase64) { %>
+                <div class="mt-4 pt-3 border-t border-slate-200 space-y-3">
+                    <div class="flex flex-wrap justify-between items-center gap-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select id="segmentSelectIndex" class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500">
+                                <option value="0">Object #1</option>
+                            </select>
+                            <button type="button" id="btnExtractMask" onclick="window.cropSegmentToTransparentPng()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer">
+                                <span>✂️</span> Extract RLE Silhouette (Transparent .png)
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <% if (mediaType === 'image') { %>
+                                <button type="button" onclick="window.openCanvasModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5">
+                                    <span>🔍</span> Fullscreen
+                                </button>
+                                <button type="button" onclick="window.downloadAnnotatedCanvas()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl transition shadow-sm flex items-center gap-1.5">
+                                    <span>📥</span> Annotated Image (.png)
+                                </button>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Instant crop preview -->
+                    <div id="cropPreviewContainer" class="hidden bg-white border border-emerald-200 rounded-xl p-3 flex items-center justify-between gap-4 shadow-xs">
+                        <div class="flex items-center gap-3">
+                            <img id="cropPreviewImg" src="" alt="Silhouette Preview" class="h-16 w-16 object-contain rounded-lg border border-slate-200 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:8px_8px] p-1">
+                            <div>
+                                <p id="cropStatusMsg" class="text-xs font-bold text-emerald-700">✅ RLE silhouette successfully extracted down to the pixel!</p>
+                                <p class="text-[11px] text-slate-500">If automatic download was blocked, click the save button:</p>
+                            </div>
+                        </div>
+                        <a id="manualDownloadLink" href="#" download="cropped_silhouette.png" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition whitespace-nowrap shadow-xs">
+                            💾 Save PNG
+                        </a>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+
+    </main>
+
+    <!-- Canvas Zoom Modal (Image) -->
+    <div id="canvasModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-xs" onclick="window.closeCanvasModal()">
+        <div class="relative max-w-5xl max-h-[90vh] bg-white rounded-2xl p-4 shadow-2xl flex flex-col items-center" onclick="event.stopPropagation()">
+            <button type="button" onclick="window.closeCanvasModal()" class="absolute top-3 right-3 text-slate-500 hover:text-slate-900 text-lg font-bold bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition">&times;</button>
+            <img id="modalCanvasImg" src="" alt="Enlarged Segmentation" class="max-h-[80vh] max-w-full rounded-xl object-contain mt-4">
+        </div>
+    </div>
+
+    <% if (typeof sourceMediaBase64 !== 'undefined' && sourceMediaBase64) { %>
+    <div id="samDataPayload" 
+         class="hidden"
+         data-media="<%= sourceMediaBase64 %>"
+         data-type="<%= typeof mediaType !== 'undefined' && mediaType ? mediaType : 'image' %>"
+         data-prompt="<%= typeof targetPrompt !== 'undefined' && targetPrompt ? targetPrompt : 'Object' %>">
+    </div>
+
+    <script>
+    (function() {
+        const payloadEl = document.getElementById('samDataPayload');
+        const SOURCE_MEDIA_SRC = payloadEl ? payloadEl.dataset.media : '';
+        const MEDIA_TYPE = payloadEl ? payloadEl.dataset.type : 'image';
+        const PROMPT_LABEL = (payloadEl && payloadEl.dataset.prompt) ? payloadEl.dataset.prompt : 'Object';
+
+        const rawTextEl = document.getElementById('rawJsonData');
+        const rawTextContent = rawTextEl ? rawTextEl.innerText.trim() : '';
+        let RAW_SAM_RESULT = null;
+
+        try {
+            if (rawTextContent && (rawTextContent.startsWith('[') || rawTextContent.startsWith('{'))) {
+                RAW_SAM_RESULT = JSON.parse(rawTextContent);
+            } else {
+                RAW_SAM_RESULT = rawTextContent;
+            }
+        } catch (e) {
+            RAW_SAM_RESULT = rawTextContent;
+        }
+
+        const PALETTE = [
+            { stroke: '#ec4899', fill: [236, 72, 153] }, // Pink
+            { stroke: '#10b981', fill: [16, 185, 129] }, // Emerald
+            { stroke: '#6366f1', fill: [99, 102, 241] }, // Indigo
+            { stroke: '#f59e0b', fill: [245, 158, 11] }, // Amber
+            { stroke: '#06b6d4', fill: [6, 182, 212] },  // Cyan
+            { stroke: '#8b5cf6', fill: [139, 92, 246] }  // Violet
+        ];
+
+        let detectionsByFrame = {};
+        let totalFrameKeys = [];
+        let totalSegmentsCount = 0;
+        const baseImage = new Image();
+        baseImage.crossOrigin = "anonymous";
+
+        // COCO/SAM RLE Decoder LEB128 6-bit ASCII
+        function decodeCocoRleString(rleString, height, width) {
+            const counts = [];
+            let p = rleString.startsWith('~') ? 1 : 0;
+            const len = rleString.length;
+
+            while (p < len) {
+                let x = 0, k = 0, more = 1;
+                while (more && p < len) {
+                    const c = rleString.charCodeAt(p) - 48;
+                    x |= (c & 0x1f) << (5 * k);
+                    more = c & 0x20;
+                    p++; k++;
+                    if (!more && (c & 0x10)) x |= (-1 << (5 * k));
+                }
+                if (counts.length > 2) x += counts[counts.length - 2];
+                counts.push(x);
+            }
+            return { size: [height, width], counts };
+        }
+
+        function buildPixelMaskCanvas(det, targetW, targetH) {
+            let rle = det.rle || null;
+
+            if (!rle && det.mask && det.mask.raw) {
+                const mKv = {};
+                det.mask.raw.split(';').forEach(p => {
+                    const idx = p.indexOf('=');
+                    if (idx !== -1) mKv[p.slice(0, idx).trim()] = p.slice(idx + 1).trim();
+                });
+                if (mKv.data) {
+                    const parts = mKv.data.split(',');
+                    if (parts.length >= 3) {
+                        const mh = parseInt(parts[0], 10);
+                        const mw = parseInt(parts[1], 10);
+                        const rest = parts.slice(2).join(',');
+                        rle = decodeCocoRleString(rest, mh, mw);
+                    }
+                }
+            }
+
+            if (!rle || !rle.counts || rle.counts.length === 0) {
+                const fallbackCanvas = document.createElement('canvas');
+                fallbackCanvas.width = targetW;
+                fallbackCanvas.height = targetH;
+                const fCtx = fallbackCanvas.getContext('2d');
+                const normBox = normalizeBox(det.box, targetW, targetH);
+                if (normBox) {
+                    fCtx.fillStyle = '#ffffff';
+                    fCtx.fillRect(normBox.x, normBox.y, normBox.w, normBox.h);
+                }
+                return fallbackCanvas;
+            }
+
+            const [maskH, maskW] = rle.size;
+            const rleCanvas = document.createElement('canvas');
+            rleCanvas.width = maskW;
+            rleCanvas.height = maskH;
+            const rleCtx = rleCanvas.getContext('2d');
+            const imgData = rleCtx.createImageData(maskW, maskH);
+            const pixels = imgData.data;
+
+            let pixelIdx = 0;
+            let val = 0;
+            const totalPixels = maskW * maskH;
+
+            for (let i = 0; i < rle.counts.length; i++) {
+                const runLength = rle.counts[i];
+                if (val === 1) {
+                    const end = Math.min(totalPixels, pixelIdx + runLength);
+                    for (let p = pixelIdx; p < end; p++) {
+                        const offset = p * 4;
+                        pixels[offset] = 255;
+                        pixels[offset + 1] = 255;
+                        pixels[offset + 2] = 255;
+                        pixels[offset + 3] = 255;
+                    }
+                }
+                pixelIdx += runLength;
+                val = 1 - val;
+            }
+
+            rleCtx.putImageData(imgData, 0, 0);
+            return rleCanvas;
+        }
+
+        function extractAllFrameDetections(data) {
+            if (!data) return {};
+            if (data.parsedFrames && Object.keys(data.parsedFrames).length > 0) {
+                Object.keys(data.parsedFrames).forEach(fKey => {
+                    data.parsedFrames[fKey].forEach(d => { d.label = PROMPT_LABEL; });
+                });
+                return data.parsedFrames;
+            }
+
+            const combinedFrames = {};
+            let wireText = typeof data === 'string' ? data : JSON.stringify(data);
+            
+            const parseChunk = (chunk) => {
+                const list = [];
+                const boxRegex = /(\d+)?<\|(?:box|bbox)[:;]([^|]+)\|>(?:<\|mask[:;]([^|]+)\|>)?/gi;
+                let match;
+                while ((match = boxRegex.exec(chunk)) !== null) {
+                    const objId = match[1] ? parseInt(match[1], 10) : list.length;
+                    const boxStr = match[2].trim();
+                    const maskStr = match[3] || '';
+                    const kv = {};
+                    boxStr.split(/[;,]/).forEach(pair => {
+                        const [k, v] = pair.split('=');
+                        if (k && v !== undefined) kv[k.trim().toLowerCase()] = parseFloat(v);
+                    });
+                    list.push({
+                        objId,
+                        label: PROMPT_LABEL,
+                        box: { mode: 'xyxy', x1: kv.x1 || 0, y1: kv.y1 || 0, x2: kv.x2 || 100, y2: kv.y2 || 100 },
+                        mask: maskStr ? { raw: maskStr } : null
+                    });
+                }
+                return list;
+            };
+
+            const frameMatches = [...wireText.matchAll(/<(\d+)f>/g)];
+            if (frameMatches.length > 0) {
+                for (let i = 0; i < frameMatches.length; i++) {
+                    const fIdx = parseInt(frameMatches[i][1], 10);
+                    const start = frameMatches[i].index + frameMatches[i][0].length;
+                    const end = (i + 1 < frameMatches.length) ? frameMatches[i + 1].index : wireText.length;
+                    combinedFrames[fIdx] = parseChunk(wireText.slice(start, end));
+                }
+            } else {
+                combinedFrames[0] = parseChunk(wireText);
+            }
+            return combinedFrames;
+        }
+
+        function normalizeBox(box, targetW, targetH) {
+            if (!box) return null;
+            if (box.mode === 'xyxy') {
+                let scaleX = 1, scaleY = 1;
+                if (box.refW && box.refH && box.refW >= box.x2 && box.refH >= box.y2) {
+                    scaleX = targetW / box.refW;
+                    scaleY = targetH / box.refH;
+                } else if (box.x2 <= 1 && box.y2 <= 1) {
+                    scaleX = targetW; scaleY = targetH;
+                }
+                return {
+                    x: box.x1 * scaleX,
+                    y: box.y1 * scaleY,
+                    w: (box.x2 - box.x1) * scaleX,
+                    h: (box.y2 - box.y1) * scaleY
+                };
+            }
+            return { x: 0, y: 0, w: targetW, h: targetH };
+        }
+
+        function drawDetectionsOverlay(ctx, detections, canvasW, canvasH) {
+            const showBoxes = document.getElementById('toggleBoxes')?.checked ?? true;
+            const showMasks = document.getElementById('toggleMasks')?.checked ?? true;
+            const opacity = parseFloat(document.getElementById('maskOpacity')?.value ?? '0.45');
+
+            detections.forEach((det, index) => {
+                const colorIdx = (det.objId !== undefined ? det.objId : index) % PALETTE.length;
+                const color = PALETTE[colorIdx];
+                const [r, g, b] = color.fill;
+                const normBox = normalizeBox(det.box, canvasW, canvasH);
+                if (!normBox) return;
+
+                if (showMasks) {
+                    ctx.save();
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+                    ctx.fillRect(normBox.x, normBox.y, normBox.w, normBox.h);
+                    
+                    ctx.beginPath();
+                    ctx.ellipse(
+                        normBox.x + normBox.w / 2,
+                        normBox.y + normBox.h / 2,
+                        Math.max(4, normBox.w * 0.42),
+                        Math.max(4, normBox.h * 0.42),
+                        0, 0, Math.PI * 2
+                    );
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${Math.min(0.85, opacity + 0.25)})`;
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                if (showBoxes) {
+                    ctx.save();
+                    const lineWidth = Math.max(3, Math.round(canvasW / 220));
+                    ctx.lineWidth = lineWidth;
+                    ctx.strokeStyle = color.stroke;
+                    ctx.strokeRect(normBox.x, normBox.y, normBox.w, normBox.h);
+
+                    const labelText = `${det.label || PROMPT_LABEL} #${(det.objId ?? index) + 1}`;
+                    const fontSize = Math.max(12, Math.round(canvasW / 52));
+                    ctx.font = `bold ${fontSize}px sans-serif`;
+
+                    const pad = 6;
+                    const textW = ctx.measureText(labelText).width;
+                    const badgeH = fontSize + pad * 1.5;
+                    const badgeY = normBox.y > badgeH ? (normBox.y - badgeH) : normBox.y;
+
+                    ctx.fillStyle = color.stroke;
+                    ctx.fillRect(normBox.x, badgeY, textW + pad * 2, badgeH);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(labelText, normBox.x + pad, badgeY + fontSize + 1);
+                    ctx.restore();
+                }
+            });
+        }
+
+        function populateSegmentSelector(detectionsList) {
+            const selectEl = document.getElementById('segmentSelectIndex');
+            if (!selectEl || !Array.isArray(detectionsList) || detectionsList.length === 0) return;
+
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = '';
+            detectionsList.forEach((det, idx) => {
+                const opt = document.createElement('option');
+                opt.value = String(idx);
+                opt.textContent = `${det.label || PROMPT_LABEL} #${(det.objId ?? idx) + 1}`;
+                selectEl.appendChild(opt);
+            });
+            if ([...selectEl.options].some(o => o.value === currentVal)) {
+                selectEl.value = currentVal;
+            }
+        }
+
+        function getActiveFrameDetections() {
+            if (totalFrameKeys.length === 0) return [];
+
+            if (MEDIA_TYPE === 'video') {
+                const video = document.getElementById('samVideo');
+                if (video && video.duration > 0) {
+                    const maxFrameIdx = totalFrameKeys[totalFrameKeys.length - 1];
+                    const progress = video.currentTime / video.duration;
+                    const estimatedFrame = Math.round(progress * maxFrameIdx);
+
+                    let closestFrame = totalFrameKeys[0];
+                    let minDiff = Math.abs(estimatedFrame - closestFrame);
+                    for (const fk of totalFrameKeys) {
+                        const diff = Math.abs(estimatedFrame - fk);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestFrame = fk;
+                        }
+                    }
+                    return detectionsByFrame[closestFrame] || [];
+                }
+            }
+            return detectionsByFrame[0] || detectionsByFrame[totalFrameKeys[0]] || [];
+        }
+
+        detectionsByFrame = extractAllFrameDetections(RAW_SAM_RESULT);
+        totalFrameKeys = Object.keys(detectionsByFrame).map(Number).sort((a, b) => a - b);
+        totalSegmentsCount = totalFrameKeys.reduce((acc, k) => acc + detectionsByFrame[k].length, 0);
+
+        if (totalFrameKeys.length > 0) {
+            populateSegmentSelector(detectionsByFrame[totalFrameKeys[0]]);
+        }
+
+        const counterEl = document.getElementById('detectionCounter');
+        if (counterEl) {
+            if (totalSegmentsCount > 0) {
+                counterEl.textContent = MEDIA_TYPE === 'video'
+                    ? `✅ ${totalSegmentsCount} RLE detection(s) tracked across ${totalFrameKeys.length} frame(s) for "${PROMPT_LABEL}"`
+                    : `✅ ${totalSegmentsCount} RLE silhouette(s) plotted for "${PROMPT_LABEL}"`;
+                counterEl.className = "text-xs font-semibold text-emerald-600 mt-0.5";
+            } else {
+                counterEl.textContent = `⚠️ No RLE mask detected for "${PROMPT_LABEL}" (try a short English keyword like "person", "car", "cell").`;
+                counterEl.className = "text-xs font-medium text-amber-600 mt-0.5";
+            }
+        }
+
+        function renderImageMode() {
+            const canvas = document.getElementById('samCanvas');
+            if (!canvas || !baseImage.complete || !baseImage.naturalWidth) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = baseImage.naturalWidth;
+            canvas.height = baseImage.naturalHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(baseImage, 0, 0);
+
+            const firstFrameDetections = getActiveFrameDetections();
+            populateSegmentSelector(firstFrameDetections);
+            drawDetectionsOverlay(ctx, firstFrameDetections, canvas.width, canvas.height);
+        }
+
+        function renderVideoOverlayFrame() {
+            const video = document.getElementById('samVideo');
+            const overlay = document.getElementById('samVideoOverlay');
+            if (!video || !overlay || !video.videoWidth) return;
+
+            overlay.width = video.videoWidth;
+            overlay.height = video.videoHeight;
+            const ctx = overlay.getContext('2d');
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+            const frameDetections = getActiveFrameDetections();
+            populateSegmentSelector(frameDetections);
+            drawDetectionsOverlay(ctx, frameDetections, overlay.width, overlay.height);
+        }
+
+        window.refreshCurrentView = function() {
+            if (MEDIA_TYPE === 'video') {
+                renderVideoOverlayFrame();
+            } else {
+                renderImageMode();
+            }
+        };
+
+        window.cropSegmentToTransparentPng = function() {
+            try {
+                const activeDetections = getActiveFrameDetections();
+                if (!activeDetections || activeDetections.length === 0) {
+                    alert("No segment detected on this media.");
+                    return;
+                }
+
+                const selectEl = document.getElementById('segmentSelectIndex');
+                const selectedIdx = selectEl ? (parseInt(selectEl.value, 10) || 0) : 0;
+                const det = activeDetections[selectedIdx] || activeDetections[0];
+
+                const isVideoMode = (MEDIA_TYPE === 'video');
+                const sourceEl = isVideoMode ? document.getElementById('samVideo') : baseImage;
+                const naturalW = isVideoMode ? sourceEl.videoWidth : sourceEl.naturalWidth;
+                const naturalH = isVideoMode ? sourceEl.videoHeight : sourceEl.naturalHeight;
+
+                if (!naturalW || !naturalH) {
+                    alert("Media is not ready yet. Play the video for a brief moment and try again.");
+                    return;
+                }
+
+                const normBox = normalizeBox(det.box, naturalW, naturalH);
+                if (!normBox || normBox.w <= 0 || normBox.h <= 0) {
+                    alert("Invalid object coordinates.");
+                    return;
+                }
+
+                const cropX = Math.max(0, Math.round(normBox.x));
+                const cropY = Math.max(0, Math.round(normBox.y));
+                const cropW = Math.min(naturalW - cropX, Math.max(1, Math.round(normBox.w)));
+                const cropH = Math.min(naturalH - cropY, Math.max(1, Math.round(normBox.h)));
+
+                const cropCanvas = document.createElement('canvas');
+                cropCanvas.width = cropW;
+                cropCanvas.height = cropH;
+                const cropCtx = cropCanvas.getContext('2d');
+
+                cropCtx.drawImage(
+                    sourceEl,
+                    cropX, cropY, cropW, cropH,
+                    0, 0, cropW, cropH
+                );
+
+                const dataUrl = cropCanvas.toDataURL('image/png');
+                const safeLabel = (det.label || 'silhouette').replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
+                const fileName = `dannaedu_cropped_${safeLabel}_${selectedIdx + 1}_${Date.now()}.png`;
+
+                const previewBox = document.getElementById('cropPreviewContainer');
+                const previewImg = document.getElementById('cropPreviewImg');
+                const manualLink = document.getElementById('manualDownloadLink');
+                if (previewBox && previewImg && manualLink) {
+                    previewImg.src = dataUrl;
+                    manualLink.href = dataUrl;
+                    manualLink.download = fileName;
+                    previewBox.classList.remove('hidden');
+                }
+
+                const tempLink = document.createElement('a');
+                tempLink.style.display = 'none';
+                tempLink.href = dataUrl;
+                tempLink.download = fileName;
+                document.body.appendChild(tempLink);
+                tempLink.click();
+                setTimeout(() => {
+                    if (tempLink.parentNode) document.body.removeChild(tempLink);
+                }, 500);
+
+            } catch (err) {
+                console.error("Crop error:", err);
+                alert("Error during download: " + err.message);
+            }
+        };
+
+        window.downloadAnnotatedCanvas = function() {
+            const canvas = document.getElementById('samCanvas');
+            if (!canvas) return;
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `segmentation_annotation_${Date.now()}.png`;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.openCanvasModal = function() {
+            const canvas = document.getElementById('samCanvas');
+            if (!canvas) return;
+            document.getElementById('modalCanvasImg').src = canvas.toDataURL('image/png');
+            document.getElementById('canvasModal').classList.remove('hidden');
+        };
+
+        window.closeCanvasModal = function() {
+            document.getElementById('canvasModal').classList.add('hidden');
+        };
+
+        if (MEDIA_TYPE === 'video') {
+            const videoEl = document.getElementById('samVideo');
+            if (videoEl) {
+                videoEl.addEventListener('loadedmetadata', renderVideoOverlayFrame);
+                videoEl.addEventListener('loadeddata', renderVideoOverlayFrame);
+                videoEl.addEventListener('timeupdate', renderVideoOverlayFrame);
+                videoEl.addEventListener('seeked', renderVideoOverlayFrame);
+                videoEl.addEventListener('play', () => {
+                    function updateLoop() {
+                        if (!videoEl.paused && !videoEl.ended) {
+                            renderVideoOverlayFrame();
+                            requestAnimationFrame(updateLoop);
+                        }
+                    }
+                    requestAnimationFrame(updateLoop);
+                });
+                if (videoEl.readyState >= 1) {
+                    renderVideoOverlayFrame();
+                }
+            }
+        } else {
+            baseImage.onload = renderImageMode;
+            baseImage.src = SOURCE_MEDIA_SRC;
+        }
+    })();
+    </script>
+    <% } %>
+</body>
+</html>

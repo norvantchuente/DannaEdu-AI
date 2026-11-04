@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="<%= user.language === 'Anglais' ? 'en' : (user.language === 'Espagnol' ? 'es' : 'en') %>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 shadow-sm">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white font-black px-3 py-1.5 rounded-xl shadow-md text-sm">DE</div>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900">DannaEdu <span class="text-indigo-600">AI</span></h1>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Dynamic Language Selector (25 languages) -->
+                <form action="/user/language" method="POST" class="flex items-center">
+                    <select name="language" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+                        <% const languages = ['Français', 'Anglais', 'Espagnol', 'Allemand', 'Arabe', 'Chinois mandarin', 'Japonais', 'Coréen', 'Italien', 'Portugais', 'Néerlandais', 'Russe', 'Turc', 'Polonais', 'Vietnamien', 'Hindi', 'Hébreu', 'Suédois', 'Danois', 'Finnois', 'Grec', 'Tchèque', 'Hongrois', 'Roumain', 'Indonésien']; %>
+                        <% languages.forEach(lang => { %>
+                            <option value="<%= lang %>" <%= user.language === lang ? 'selected' : '' %>><%= lang %></option>
+                        <% }) %>
+                    </select>
+                </form>
+
+                <div class="text-right hidden sm:block border-l border-slate-200 pl-4">
+                    <p class="text-xs font-semibold text-slate-800"><%= user.name %></p>
+                    <p class="text-[10px] text-indigo-600"><%= user.level %></p>
+                </div>
+                <a href="/logout" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-medium px-3 py-1.5 rounded-xl transition">Sign Out</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-6 flex-grow space-y-8">
+
+        <!-- Welcome & Key Dynamic Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm md:col-span-1 flex flex-col justify-between">
+                <div>
+                    <span class="text-indigo-600 text-xs font-semibold uppercase tracking-wider">Welcome Back</span>
+                    <h2 class="text-lg font-bold mt-1 text-slate-900"><%= user.name %></h2>
+                    <p class="text-xs text-slate-500 mt-0.5"><%= user.email %></p>
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-200 text-xs text-indigo-600 flex justify-between items-center">
+                    <span>Language: <strong><%= user.language %></strong></span>
+                    <span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100"><%= user.level %></span>
+                </div>
+            </div>
+
+            <!-- GLOBAL PROGRESS (Dynamic) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-emerald-600 text-xs font-semibold uppercase tracking-wider">Global Progress</span>
+                    <div class="text-3xl font-black mt-2 text-slate-900"><%= stats.completionRate %>%</div>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-2 mt-4 overflow-hidden">
+                    <div class="bg-emerald-500 h-full rounded-full" style="--completion: <%= stats.completionRate %>%; width: var(--completion);"></div> 
+                </div>
+            </div>
+
+            <!-- LEARNING STREAK (Dynamic) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-amber-600 text-xs font-semibold uppercase tracking-wider">Learning Streak</span>
+                    <div class="text-3xl font-black mt-2 text-slate-900"><%= stats.streakDays %> Days </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-4">Activity recorded this week.</p>
+            </div>
+
+            <!-- AI INTERACTIONS (Dynamic) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="text-pink-600 text-xs font-semibold uppercase tracking-wider">AI Interactions</span>
+                    <div class="text-3xl font-black mt-2 text-slate-900"><%= stats.totalActivities %></div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-4">Requests processed successfully.</p>
+            </div>
+        </div>
+
+        <!-- Specialities / Subjects Section -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+            <h3 class="text-base font-bold text-slate-900">🎓 Specialties & Subjects</h3>
+            <div class="flex flex-wrap gap-2">
+                <a href="/dashboard" class="<%= !selectedSubjectId ? 'bg-indigo-600 text-white shadow-md' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200' %> px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2">
+                    <span>🌟</span> All Courses
+                </a>
+                
+                <% if (typeof subjects !== 'undefined' && subjects.length > 0) { %>
+                    <% subjects.forEach(sub => { %>
+                        <a href="/dashboard?subject_id=<%= sub.id %>" class="<%= selectedSubjectId == sub.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200' %> px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2">
+                            <span><%= sub.icon || '📚' %></span> <%= sub.name %>
+                        </a>
+                    <% }) %>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Main Grid: Left Column (Content) & Right Column (Activities) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Recommended Courses, Tools & Imported Courses -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Recommended Courses -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-base font-bold text-slate-900">📚 Recommended Courses</h3>
+                        <span class="text-xs text-indigo-600 font-medium">Language: <%= user.language %></span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <% if (recommendedCourses && recommendedCourses.length > 0) { %>
+                            <% recommendedCourses.forEach(course => { %>
+                                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-indigo-300 transition flex flex-col justify-between space-y-4">
+                                    <div>
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="bg-indigo-50 text-indigo-600 text-[10px] font-semibold px-2.5 py-1 rounded-full"><%= course.level %></span>
+                                            <span class="text-[10px] text-slate-400"><%= course.target_language %></span>
+                                        </div>
+                                        <h4 class="font-bold text-sm text-slate-900"><%= course.title %></h4>
+                                        <p class="text-xs text-slate-600 mt-1 line-clamp-2"><%= course.description %></p>
+                                    </div>
+                                    <a href="/courses/<%= course.id %>" class="w-full bg-white hover:bg-indigo-600 hover:text-white border border-slate-200 text-slate-700 font-medium py-2 rounded-xl text-xs transition text-center block shadow-xs">Access Course</a>
+                                </div>
+                            <% }) %>
+                        <% } else { %>
+                            <p class="text-xs text-slate-400 col-span-full">No courses available for <%= user.language %> at the moment.</p>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Advanced Tools Access Section -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                    <h3 class="text-base font-bold text-slate-900">⚡ Advanced Tools</h3>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <a href="/tools/wonder" class="bg-white border border-slate-200 hover:border-indigo-400 p-3 rounded-xl text-center transition block shadow-xs">
+                            <span class="text-xl">📖</span>
+                            <p class="text-xs font-semibold mt-2 text-indigo-600">Translation</p>
+                        </a>
+                        <a href="/tools/image" class="bg-white border border-slate-200 hover:border-emerald-400 p-3 rounded-xl text-center transition block shadow-xs">
+                            <span class="text-xl">🎨</span>
+                            <p class="text-xs font-semibold mt-2 text-emerald-600">Illustrations</p>
+                        </a>
+                        <a href="/tools/voice" class="bg-white border border-slate-200 hover:border-amber-400 p-3 rounded-xl text-center transition block shadow-xs">
+                            <span class="text-xl">🎙️</span>
+                            <p class="text-xs font-semibold mt-2 text-amber-600">Transcription</p>
+                        </a>
+                        <a href="/tools/sam" class="bg-white border border-slate-200 hover:border-pink-400 p-3 rounded-xl text-center transition block shadow-xs">
+                            <span class="text-xl">🔍</span>
+                            <p class="text-xs font-semibold mt-2 text-pink-600">Object Segmentation</p>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Section: Imported Dynamic Courses -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-base font-bold text-slate-900">📂 My Imported Courses</h3>
+                        <a href="/courses/import" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 text-xs font-semibold px-3 py-1.5 rounded-xl transition">＋ Import New Course</a>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <% if (typeof dynamicCourses !== 'undefined' && dynamicCourses.length > 0) { %>
+                            <% dynamicCourses.forEach(course => { %>
+                                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-indigo-300 transition flex flex-col justify-between space-y-4">
+                                    <div>
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="bg-emerald-50 text-emerald-600 text-[10px] font-semibold px-2.5 py-1 rounded-full"><%= course.level || 'Independent' %></span>
+                                            <span class="text-[10px] text-slate-400"><%= course.target_language %></span>
+                                        </div>
+                                        <h4 class="font-bold text-sm text-slate-900"><%= course.title %></h4>
+                                        <p class="text-xs text-slate-600 mt-1 line-clamp-2"><%= course.description %></p>
+                                    </div>
+                                    <a href="/courses/view/<%= course.id %>" class="w-full bg-white hover:bg-indigo-600 hover:text-white border border-slate-200 text-slate-700 font-medium py-2 rounded-xl text-xs transition text-center block shadow-xs">View Course</a>
+                                </div>
+                            <% }) %>
+                        <% } else { %>
+                            <p class="text-xs text-slate-400 col-span-full py-4 text-center">No imported courses yet. Use the button above to add your first document.</p>
+                        <% } %>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Recent Activities -->
+            <div class="space-y-6">
+                <h3 class="text-base font-bold text-slate-900">📋 Recent Activity</h3>
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                    <% if (recentLogs && recentLogs.length > 0) { %>
+                        <div class="space-y-3">
+                            <% recentLogs.forEach(log => { 
+                                let meta = {};
+                                try { meta = JSON.parse(log.metadata || '{}'); } catch(e) {}
+                                
+                                let actionTitle = log.action;
+                                let actionDesc = log.metadata;
+
+                                if (log.action === 'UPDATE_LANGUAGE') {
+                                    actionTitle = "Language Update";
+                                    actionDesc = `Language set to: ${meta.newLanguage || 'Unknown'}`;
+                                } else if (log.action === 'WONDER_ADAPT' || log.action === 'ADAPT_TEXT') {
+                                    actionTitle = "Course Adaptation";
+                                    actionDesc = `Language: ${meta.targetLanguage || 'Standard'} (${meta.targetLevel || 'Standard level'})`;
+                                } else if (log.action === 'GENERATE_IMAGE') {
+                                    actionTitle = "Illustration Generation";
+                                    actionDesc = meta.prompt ? `Prompt: "${meta.prompt}"` : 'Visual creation';
+                                } else if (log.action === 'TRANSCRIBE_AUDIO') {
+                                    actionTitle = "Audio Transcription";
+                                    actionDesc = `File transcribed successfully`;
+                                } else if (log.action === 'SEGMENT_MEDIA') {
+                                    actionTitle = "Object Segmentation & Tracking";
+                                    actionDesc = `Target: ${meta.prompt || 'Object'} (${meta.type || 'image'})`;
+                                } else if (log.action === 'IMPORT_COURSE') {
+                                    actionTitle = "Course Import";
+                                    actionDesc = `Title: ${meta.title || 'Document'}`;
+                                }
+                            %>
+                                <div class="bg-white border border-slate-200 rounded-xl p-3 flex flex-col space-y-1 shadow-xs">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-[11px] font-semibold text-indigo-600"><%= actionTitle %></span>
+                                        <span class="text-[10px] text-slate-400"><%= new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %></span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-600"><%= actionDesc %></p>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <p class="text-xs text-slate-400 text-center py-6">No activity recorded yet.</p>
+                    <% } %>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 p-4 text-center text-xs text-slate-400">
+        DannaEdu AI – World-Class Inclusive and Multilingual Education &copy; 2026
+    </footer>
+
+</body>
+</html>

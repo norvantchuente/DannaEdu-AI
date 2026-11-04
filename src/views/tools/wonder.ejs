@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="<%= user.language === 'Anglais' ? 'en' : (user.language === 'Espagnol' ? 'es' : 'en') %>">
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-slate-800 min-h-screen flex flex-col font-sans">
+    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-50 shadow-sm">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="/dashboard" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-xl transition font-medium">← Dashboard</a>
+            <h1 class="text-base font-bold text-slate-900">📖 Educational Adaptation & Translation</h1>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6 flex-grow grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-xs text-indigo-700">
+                ℹ️ <strong>Module Description:</strong> This module rewrites, translates, and adapts your text content or imported documents (PDF/Word) across 25 supported languages, precisely tailored to the learner's proficiency level.
+            </div>
+
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div class="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-medium"><%= error %></div>
+            <% } %>
+
+            <form action="/tools/wonder" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Import a document (PDF or Word):</label>
+                    <input type="file" name="documentFile" accept=".pdf,.docx,.doc,.txt" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-600 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 shadow-xs">
+                </div>
+
+                <div class="text-center text-xs text-slate-400 font-medium">— OR —</div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Enter or paste text content:</label>
+                    <textarea name="content" rows="4" placeholder="Paste your educational content here..." class="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-xs"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Output Language (25 languages)</label>
+                        <select name="targetLanguage" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500">
+                            <option value="Français">French</option>
+                            <option value="Anglais">English</option>
+                            <option value="Allemand">German</option>
+                            <option value="Arabe">Arabic</option>
+                            <option value="Bengali">Bengali</option>
+                            <option value="Chinois mandarin">Mandarin Chinese</option>
+                            <option value="Coréen">Korean</option>
+                            <option value="Espagnol">Spanish</option>
+                            <option value="Hébreu">Hebrew</option>
+                            <option value="Hindi">Hindi</option>
+                            <option value="Indonésien">Indonesian</option>
+                            <option value="Italien">Italian</option>
+                            <option value="Japonais">Japanese</option>
+                            <option value="Kannada">Kannada</option>
+                            <option value="Malais">Malay</option>
+                            <option value="Marathi">Marathi</option>
+                            <option value="Néerlandais">Dutch</option>
+                            <option value="Pidgin English">Pidgin English</option>
+                            <option value="Polonais">Polish</option>
+                            <option value="Portugais">Portuguese</option>
+                            <option value="Tagalog">Tagalog</option>
+                            <option value="Tamoul">Tamil</option>
+                            <option value="Télougou">Telugu</option>
+                            <option value="Thaï">Thai</option>
+                            <option value="Turc">Turkish</option>
+                            <option value="Vietnamien">Vietnamese</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Target Level</label>
+                        <select name="targetLevel" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500">
+                            <option value="Débutant">Beginner</option>
+                            <option value="Intermédiaire">Intermediate</option>
+                            <option value="Professionnel">Professional</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl text-sm transition shadow-md">Adapt Content</button>
+            </form>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Adaptation Result:</h3>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 flex-grow overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap text-slate-800 shadow-xs">
+                <%= resultText || 'The adapted result (from your text or document) will appear here after processing...' %>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

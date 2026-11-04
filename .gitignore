@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment files and secrets
+.env
+
+# Temporary uploads folder
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Local dynamic classes
+content/dynamic-courses/*.json
+
+# System and IDE
+.DS_Store
+.vscode/
+*.log
