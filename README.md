@@ -5,10 +5,11 @@ DannaEdu AI is a next-generation multilingual educational platform designed to b
 🚀 Key Features
 
 - 🌐 24/7 Multilingual Support: Fully localized in **25 major languages**, enabling accessible learning worldwide.
-- 📖 Intelligent Content Adaptation (Baseten): Automatically rewrites, translates, and tailors text or imported documents (PDF, Word, TXT) to the exact proficiency level of the learner (Beginner, Intermediate, Professional).
+- 📖 Intelligent Content Adaptation (Baseten - Muse Spark Open): Automatically rewrites, translates, and tailors text or imported documents (PDF, Word, TXT) to the exact proficiency level of the learner (Beginner, Intermediate, Professional).
 - 🤖 Personal AI Tutor (Danna AI): A supportive 24/7 virtual tutor that answers questions, analyzes attached images, and provides guidance entirely in plain text (strict anti-Markdown formatting for smooth interaction).
+- 🎨 Image Generation and Editing (Muse Image): Instantly creates clean, minimalist vector educational illustrations from text descriptions or modifies existing source images via specialized endpoints (`/v1/images/edits`) with real-time zoom, preview, and download capabilities.
 - 🔍 Advanced Visual & Video Segmentation (SAM 3.1): Target and isolate elements down to the pixel on images or videos (e.g., biological cells, anatomical organs, mechanical parts) and extract transparent RLE silhouettes instantly.
-- 🎙️ Voice Transcription & Speaker Diarization (Baseten) : Converts course audio recordings (.wav, .mp3) into structured notes with speaker distinction and text-to-speech audio playback.
+- 🎙️ Voice Transcription & Speaker Diarization (Baseten - Muse Spark Open) : Converts course audio recordings (.wav, .mp3) into structured notes with speaker distinction and text-to-speech audio playback.
 - 📂 Dynamic Course Importers: Import and manage custom educational materials with instant JSON storage and secure MySQL persistence.
 
 🛠️ Tech Stack
